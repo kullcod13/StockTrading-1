@@ -29,6 +29,9 @@
 
 ######## Add Indicators to the stock data
 ### What indicators do you plan on using to add to the data.
+
+https://towardsdatascience.com/technical-analysis-library-to-financial-datasets-with-pandas-python-4b2b390d3543
+
 # 1. Pick indicators 
         32 indicators
 Volume
