@@ -46,7 +46,7 @@ def  Currency_Pairs():
     return stock
     
 
-
+#
 
 def Format_Data(data,MA100,ADX15):
 
