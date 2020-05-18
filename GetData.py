@@ -12,8 +12,23 @@ import random
 import requests
 from datetime import timedelta
 import v20
-import ta
+#import ta
 import math
+import talib
+from talib import MA_Type
+from talib import TSF
+from talib import ADX
+import matplotlib.pyplot as plt
+import mplfinance as mpf
+import matplotlib.ticker as mticker
+
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+
+import matplotlib.dates as mpl_dates
+
+plt.style.use('ggplot')
 
 ########## GLOBALS
 
@@ -22,21 +37,21 @@ import math
 
 
 ########## FUNCTIONS
-def Flow():
-    Format_Data()
+
 
 #### This uses my account information to give to the request
 def Get_Api_Key():
-    access_token = ''
+    access_token = 'd5698e5908e8b7989f50c40bac0f1c53-6fbc07c1ea7dad76a287069fb4f931e5'
     return access_token
 
 def Get_AccountId():
-    accountID = ''
+    accountID = '101-001-14704433-001'
     return accountID
 
 def Get_Account_Info():
-    api_key = ''
-    client = oandapyV20.API(access_token=api_key)
+    accountID = '101-001-14704433-001'
+    access_token = 'd5698e5908e8b7989f50c40bac0f1c53-6fbc07c1ea7dad76a287069fb4f931e5'
+    client = oandapyV20.API(access_token=access_token)
     return client
 
 
@@ -46,51 +61,58 @@ def  Currency_Pairs():
     return stock
     
 
-#
 
-def Format_Data(data,MA100,ADX15):
 
-    #print(data)
-    #print(MA100)
+def Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX):
+
+
     inc = 0
     dat = []
     for oo in data['candles']:
-        dat.append([oo['time'], oo['volume'], oo['mid']['o'], oo['mid']['h'], oo['mid']['l'], oo['mid']['c'], MA100[inc]])
+        dat.append([
+        oo['time'], 
+        oo['volume'], 
+        oo['mid']['o'], 
+        oo['mid']['h'], 
+        oo['mid']['l'], 
+        oo['mid']['c'],
+        SiMA[inc],
+        Bu[inc],
+        Bm[inc],
+        Bl[inc],
+        MoM5[inc],
+        TSF14[inc],
+        ADX[inc]
+        
+        ])
         inc +=1
         #print(inc)
     df = pd.DataFrame(dat)
-    df.columns = ['Time', 'Volume', 'Open', 'High', 'Low', 'Close','MA100']
+    df.columns = ['Time', 'Volume', 'Open', 'High', 'Low', 'Close','SiMA','BolUp','BolMid','BolLow','Momentum','TSF14','ADX']
+    df['Time'] = pd.to_datetime(df['Time'])
+    df['Time'] = df['Time'].dt.strftime('%Y-%m-%d %I:%M:%S')
+    df['Time'] = pd.to_datetime(df['Time'])
     df = df.set_index('Time')
-    print(df.head(200))
+    graph(df)
+    
+
+    #output = talib.SMA(df['Close'])
+    #output2 = talib.MOM(df['Close'], timeperiod=5)
+    #print(output)
+    #print(output2)
+    pd.set_option('display.max_rows', 50)
+    pd.set_option('display.max_columns', 50)
+    pd.set_option('display.width', 150)
+    print(pair)
+    #print(df)
+
+    #graph(df)
+    
     return df
 
 
-def Get_Historical_Data():
-    client = Get_Account_Info()
-    data = oanda.get_history(instrument='ZAR_USD',  # our instrument
-                         start='2016-12-08',  # start data
-                         end='2016-12-10',  # end date
-                         granularity='M1')  # minute bars  # 7
 
-def Get_Oanda_Account_Info():
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer d5698e5908e8b7989f50c40bac0f1c53-6fbc07c1ea7dad76a287069fb4f931e5',
-    }
 
-    response = requests.get('https://api-fxpractice.oanda.com/v3/accounts', headers=headers)
-
-    print(response.text, response.content)
-
-def Get_Account_Summary():
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer d5698e5908e8b7989f50c40bac0f1c53-6fbc07c1ea7dad76a287069fb4f931e5',
-    }
-
-    response = requests.get('https://api-fxpractice.oanda.com/v3/accounts/101-001-14704433-001/summary', headers=headers)
-    print(response)
 
 def candleoptions():
     Candle_Sticks_Options = '''
@@ -120,13 +142,15 @@ def candleoptions():
     #'key1': 'value1',
     #'key2': ['value2', 'value3'],
     #“12345678.000000123”
+
+
 #### This makes the request to oanda
 def Make_Request():
     client = Get_Account_Info()
     pair = Currency_Pairs()
     pair = pair[0]
     #print(pair,pair[0])
-    print(pair)
+    #print(pair)
 
     params = {
         #"Accept-Datetime-Format":['unix','555.555'],   
@@ -140,8 +164,11 @@ def Make_Request():
         data = client.request(r)
     except:
         print('That stock isnt supported')
-    
-    return data
+
+    if data == 'none':
+        Make_Request()
+
+    return data,pair
 
 def Calculate_100DayMovingAverage(data):
     MOVING_AVERAGE_DOC = '''
@@ -174,39 +201,33 @@ def Calculate_100DayMovingAverage(data):
             #print(incr, MovAve)
         except:
             +1
-            #print('not long enuf yet')
-    #df = Create_DF_Column(Moving_Average_100)
     ma100 = np.array(Moving_Average_100)
     MA100 = np.insert(ma100, 0, values=np.zeros(99))#, axis=0)
     Moving_Average_100 = MA100.tolist()
     #print(Moving_Average_100)
     return Moving_Average_100
 
-def Create_DF_Column(data):
-    +1
-    ma100 = np.array(data)
-    ma100 = np.insert(ma100, 0, values=np.zeros(100))#, axis=0)
-    #print(ma100)
-    #print(type(ma100))
-    dfma100 = pd.Series(ma100)
-    df = pd.DataFrame(dfma100)
-    #df.columns = ['MA100']
-    df['MA100'] = df
-    #print(dfma100['MA100'].head(104))
-    print(df)
-    return df
-    
+def calcBOLBAND(data):
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        close.append(i['mid']['c'])
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)    
+    upper, middle, lower = talib.BBANDS(closeB, matype=MA_Type.T3)
+    return upper,middle,lower
 
-
-
-    +1
-    #print(df,df_100MA)
-    #print(len(df['Time']))
-    #df['MA100'] = df['Volume'] + df['Open'] + df['High'] + df['Low'] + df['Close'] + df_100MA['MA100']
-    #print(df)
+def calcSMA(data):
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        close.append(i['mid']['c'])
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)
+    output = talib.SMA(closeB)
+    return output
 
 def Calculate_ADX15(data):
-    +1
     ADX_DOC = ''' 
          What is the Average Directional Index (ADX)?
         The average directional index (ADX) is a technical analysis indicator used by some traders 
@@ -263,55 +284,141 @@ def Calculate_ADX15(data):
         incr +=1
     return ADX15
     
-def TR(d,c,h,l,o,yc):
-    x=h-l
-    y=abs(h-yc)
-    z=abs(l-yc)
 
-    if y <= x >=z:
-        TR = x
-    elif x <= y >=z:
-        TR = y
-    elif x<=z>=y:
-        TR = z
-    return d, TR
-
-def DM(d,o,h,l,c,yo,yh,yl,yc):
-    moveUp = h -yh
-    moveDown = yl - l
-    if 0 < moveUp > moveDown:
-        PDM = moveUp
-    else:
-        PDM = 0
-    if 0 < moveDown > moveUp:
-        NDM = moveDown
-    else:
-        NDM = 0
-    return d,PDM,NDM
-
-def ExpMovingAverage(values,window):
-    weights = np.exp(np.linspace(-1.,0., window))
-    weights /= weights.sum()
-    a = np.convolve(values,weights, mode='full')[:len(values)]
-    a[:window] = a[window]
+def calcMoM5(data):
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        close.append(i['mid']['c'])
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)
 
 
-def Add_Indicators():
-    data = Make_Request()
-    MA100 = Calculate_100DayMovingAverage(data)
-    ADX15 = Calculate_ADX15(data)
-    df = Format_Data(data,MA100,ADX15)
+    MOM5 = talib.MOM(closeB, timeperiod=5)
+    return MOM5
+def calcTSF14(data):
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        close.append(i['mid']['c'])
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)
+    real = TSF(closeB, timeperiod=14)
+    return real
+def calcADX(data):
+    high=[]
+    low=[]
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        high.append(i['mid']['h'])
+        low.append(i['mid']['l'])
+        close.append(i['mid']['c'])
+
+    highA = np.array(high)
+    highB = pd.Series(highA)
+    lowA = np.array(low)
+    lowB = pd.Series(lowA)
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)
+
+
+    real = ADX(highB, lowB, closeB, timeperiod=14)
+    return real
+
+
+def graph(df):
+    df.fillna(df.mean(), inplace=True)
+    #df.fillna(df.zeros)
+    print(df)
+    df.plot()
+    plt.show()
+
+
+
+
+
+
+    #df['Upper'] = df['Close'] + 2*(df['Close'].rolling(20).std())
+    #df.rolling(window=70).mean()['High'].plot()
+    #plt.figure(figsize=(10,10))
+    
+    #plt.plot(df['TSF14'], 'o--', label="TSF14")
+
+    #plt.plot(df['upper'], 'g--', label="upper")
+    #plt.plot(df['BolMid'], 'r--', label="middle")
+    #plt.plot(df['BolLow'], 'y--', label="lower")
+    #plt.plot(df['SiMA'], 'y--', label="Sima")
+    #plt.plot(df['Close'], 'r-',label="Close")
+    
+    #plt.plot(df['Momentum'], 'o--',label = 'Momentum')
+    #plt.plot(df['ADX'], 'b--',label = 'ADX')
+    
+    #plt.xlabel("Time")
+    #plt.ylabel("Price")
+    #plt.title("Cool Data Plot")
+    #plt.legend()
+    
+    ## LEFT BOTTOW WIDTH HIEGHT
+    #fig,axes = plt.subplots(nrows=3,ncols=1)
+    #axes[0].plot(df['Close'])
+    #axes[1].plot(df['Close'])
+    #axes[1].plot(df['Volume'])
+    #axes[2].plot(df['ADX'])
+
+    #ax2.set_xlim\sety_lim
+    #plt.subplot(3,1,1)
+    #plt.plot(df['BolUp'])
+    #plt.plot(df['BolMid'])
+    #plt.plot(df['BolLow'])
+
+    #plt.subplot(3,1,2)
+    #plt.plot(df['Close'])
+    #plt.plot(df['Volume'])
+
+    #plt.subplot(3,1,3)
+    #plt.plot(df['ADX'])
+
+
+    #fig,ax = plt.subplots()
+    #ax.plot_date
+
+    #plt.show()
+
+
+def graph3(df):
+    #df  = sm.datasets.macrodata.load_pandas().data
+    #print(sm.datasets.macrodata.NOTE)
+    #hp_cycle, hp_trend = sm.tsa.filters.hpfilter(endog, lamb=129600)
+    df.plot()
+    plt.show()
+
+    #print(df.head())
+    #df['Close'].plot()
+    #gdpcycle, gdptrend = sm.tsa.filters.hpfilter(df['Close'])
+   # type(result)
+    #df['trend'] = gdptrend
+    #df['trend'].plot()
+    #plt.subplots()
+    #plt.show()
+
+
+def Flow():
+    data,pair = Make_Request()
+    #MA100 = Calculate_100DayMovingAverage(data)
+    SiMA = calcSMA(data)
+    Bu,Bm,Bl = calcBOLBAND(data)
+    MoM5 = calcMoM5(data)
+    TSF14 = calcTSF14(data) 
+    ADX = calcADX(data)
     
     
-  
+    Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX)
+    #graph(df)
+    
     
   
 
 
 ##########  RUN
-#Flow()
-Add_Indicators()
-
-#a = ['5.824', '5.822', '5.820', '5.818', '5.818', '5.817', '5.818', '5.820', '5.822', '5.822']
-#b = math.fsum(float(a))
-#print(b)
+Flow()
