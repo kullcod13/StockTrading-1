@@ -18,6 +18,12 @@ import talib
 from talib import MA_Type
 from talib import TSF
 from talib import ADX
+from talib import MIDPRICE
+from talib import MIDPOINT
+from talib import TEMA
+
+
+
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 import matplotlib.ticker as mticker
@@ -63,7 +69,7 @@ def  Currency_Pairs():
 
 
 
-def Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX):
+def Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX,MIDPRICE5,MIDPRICE1,MIDPRICE3,TEMA):
 
 
     inc = 0
@@ -82,13 +88,22 @@ def Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX):
         Bl[inc],
         MoM5[inc],
         TSF14[inc],
-        ADX[inc]
+        ADX[inc],
+        MIDPRICE5[inc],
+        MIDPRICE1[inc],
+        MIDPRICE3[inc],
+        TEMA[inc]
         
         ])
         inc +=1
         #print(inc)
     df = pd.DataFrame(dat)
-    df.columns = ['Time', 'Volume', 'Open', 'High', 'Low', 'Close','SiMA','BolUp','BolMid','BolLow','Momentum','TSF14','ADX']
+    df.columns = ['Time',
+    'Volume', 
+    'Open', 
+    'High', 
+    'Low', 'Close','SiMA','BolUp','BolMid','BolLow','Momentum',
+    'TSF14','ADX','MIDPRICE5','MIDPRICE1','MIDPRICE3','TEMA']
     df['Time'] = pd.to_datetime(df['Time'])
     df['Time'] = df['Time'].dt.strftime('%Y-%m-%d %I:%M:%S')
     df['Time'] = pd.to_datetime(df['Time'])
@@ -100,9 +115,9 @@ def Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX):
     #output2 = talib.MOM(df['Close'], timeperiod=5)
     #print(output)
     #print(output2)
-    pd.set_option('display.max_rows', 50)
-    pd.set_option('display.max_columns', 50)
-    pd.set_option('display.width', 150)
+    pd.set_option('display.max_rows', 500)
+    pd.set_option('display.max_columns', 500)
+    pd.set_option('display.width', 1500)
     print(pair)
     #print(df)
 
@@ -314,6 +329,7 @@ def calcADX(data):
         high.append(i['mid']['h'])
         low.append(i['mid']['l'])
         close.append(i['mid']['c'])
+        
 
     highA = np.array(high)
     highB = pd.Series(highA)
@@ -327,7 +343,64 @@ def calcADX(data):
     return real
 
 
-def graph(df):
+def calcTEMA(data):
+    close=[]
+    for i in data['candles']:
+        #print(i['mid']['c'])
+        close.append(i['mid']['c'])
+    closeA = np.array(close)
+    closeB = pd.Series(closeA)
+    real = TEMA(closeB, timeperiod=30)
+    return real
+    
+def calcMIDPRICE5(data):
+    high=[]
+    low=[]
+    for i in data['candles']:
+        high.append(i['mid']['h'])
+        low.append(i['mid']['l'])
+
+    lowA = np.array(low)
+    lowB = pd.Series(lowA)
+    highA = np.array(high)
+    highB = pd.Series(highA)
+    real = MIDPRICE(highB, lowB, timeperiod=50)
+
+    return real
+
+
+def calcMIDPRICE1(data):
+    high=[]
+    low=[]
+    for i in data['candles']:
+        high.append(i['mid']['h'])
+        low.append(i['mid']['l'])
+
+    lowA = np.array(low)
+    lowB = pd.Series(lowA)
+    highA = np.array(high)
+    highB = pd.Series(highA)
+    real = MIDPRICE(highB, lowB, timeperiod=100)
+
+    return real
+
+
+def calcMIDPRICE3(data):
+    high=[]
+    low=[]
+    for i in data['candles']:
+        high.append(i['mid']['h'])
+        low.append(i['mid']['l'])
+
+    lowA = np.array(low)
+    lowB = pd.Series(lowA)
+    highA = np.array(high)
+    highB = pd.Series(highA)
+    real = MIDPRICE(highB, lowB, timeperiod=300)
+
+    return real
+
+def graph2(df):
     df.fillna(df.mean(), inplace=True)
     #df.fillna(df.zeros)
     print(df)
@@ -339,54 +412,54 @@ def graph(df):
 
 
 
-    #df['Upper'] = df['Close'] + 2*(df['Close'].rolling(20).std())
-    #df.rolling(window=70).mean()['High'].plot()
-    #plt.figure(figsize=(10,10))
+    df['Upper'] = df['Close'] + 2*(df['Close'].rolling(20).std())
+    df.rolling(window=70).mean()['High'].plot()
+    plt.figure(figsize=(10,10))
     
-    #plt.plot(df['TSF14'], 'o--', label="TSF14")
+    plt.plot(df['TSF14'], 'o--', label="TSF14")
 
-    #plt.plot(df['upper'], 'g--', label="upper")
-    #plt.plot(df['BolMid'], 'r--', label="middle")
-    #plt.plot(df['BolLow'], 'y--', label="lower")
-    #plt.plot(df['SiMA'], 'y--', label="Sima")
-    #plt.plot(df['Close'], 'r-',label="Close")
+    plt.plot(df['upper'], 'g--', label="upper")
+    plt.plot(df['BolMid'], 'r--', label="middle")
+    plt.plot(df['BolLow'], 'y--', label="lower")
+    plt.plot(df['SiMA'], 'y--', label="Sima")
+    plt.plot(df['Close'], 'r-',label="Close")
     
-    #plt.plot(df['Momentum'], 'o--',label = 'Momentum')
-    #plt.plot(df['ADX'], 'b--',label = 'ADX')
+    plt.plot(df['Momentum'], 'o--',label = 'Momentum')
+    plt.plot(df['ADX'], 'b--',label = 'ADX')
     
-    #plt.xlabel("Time")
-    #plt.ylabel("Price")
-    #plt.title("Cool Data Plot")
-    #plt.legend()
-    
+    plt.xlabel("Time")
+    plt.ylabel("Price")
+    plt.title("Cool Data Plot")
+    plt.legend()
+    plt.show()
     ## LEFT BOTTOW WIDTH HIEGHT
-    #fig,axes = plt.subplots(nrows=3,ncols=1)
-    #axes[0].plot(df['Close'])
-    #axes[1].plot(df['Close'])
-    #axes[1].plot(df['Volume'])
-    #axes[2].plot(df['ADX'])
+    fig,axes = plt.subplots(nrows=3,ncols=1)
+    axes[0].plot(df['Close'])
+    axes[1].plot(df['Close'])
+    axes[1].plot(df['Volume'])
+    axes[2].plot(df['ADX'])
 
     #ax2.set_xlim\sety_lim
-    #plt.subplot(3,1,1)
-    #plt.plot(df['BolUp'])
-    #plt.plot(df['BolMid'])
-    #plt.plot(df['BolLow'])
+    plt.subplot(3,1,1)
+    plt.plot(df['BolUp'])
+    plt.plot(df['BolMid'])
+    plt.plot(df['BolLow'])
 
-    #plt.subplot(3,1,2)
-    #plt.plot(df['Close'])
-    #plt.plot(df['Volume'])
+    plt.subplot(3,1,2)
+    plt.plot(df['Close'])
+    plt.plot(df['Volume'])
 
-    #plt.subplot(3,1,3)
-    #plt.plot(df['ADX'])
-
-
-    #fig,ax = plt.subplots()
-    #ax.plot_date
-
-    #plt.show()
+    plt.subplot(3,1,3)
+    plt.plot(df['ADX'])
 
 
-def graph3(df):
+    fig,ax = plt.subplots()
+    ax.plot_date
+
+    plt.show()
+
+
+def graph(df):
     #df  = sm.datasets.macrodata.load_pandas().data
     #print(sm.datasets.macrodata.NOTE)
     #hp_cycle, hp_trend = sm.tsa.filters.hpfilter(endog, lamb=129600)
@@ -411,9 +484,12 @@ def Flow():
     MoM5 = calcMoM5(data)
     TSF14 = calcTSF14(data) 
     ADX = calcADX(data)
+    MIDPRICE5 = calcMIDPRICE5(data)
+    MIDPRICE1 = calcMIDPRICE1(data)
+    MIDPRICE3 = calcMIDPRICE3(data)
+    TEMA = calcTEMA(data)
     
-    
-    Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX)
+    Format_Data(data,pair,SiMA,Bu,Bm,Bl,MoM5,TSF14,ADX,MIDPRICE5,MIDPRICE1,MIDPRICE3,TEMA)
     #graph(df)
     
     
